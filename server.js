@@ -1,28 +1,35 @@
 // backend/server.js
-require('dotenv').config(); // Load environment variables from .env
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-const MONGODB_URI = process.env.MONGODB_URI;
 
-// Middleware
-app.use(cors());
-app.use(express.json()); // To parse incoming JSON requests
+// FIX: Relaxing CORS for local development to resolve HTTP ERROR 403
+// The previous line was: app.use(cors({ origin: "http://localhost:5173" })); 
+app.use(cors()); 
 
-// Simple Test Route
-app.get('/', (req, res) => {
-  res.send('EventGhar Backend is running!');
+app.use(express.json());
+
+// Routes
+const eventRoutes = require("./routes/events");
+app.use("/api/events", eventRoutes);
+
+const featuredRoutes = require("./routes/featuredEvents");
+app.use("/api/featured-events", featuredRoutes);
+
+
+// Test route
+app.get("/", (req, res) => {
+  res.send("EventGhar Backend is running!");
 });
 
-// Database Connection
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('MongoDB connection successful!'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// DB
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log("MongoDB Connected"))
+  .catch(err => console.error(err));
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`Server is running on port: ${PORT}`);
+app.listen(process.env.PORT, () => {
+  console.log(`Server running on port ${process.env.PORT}`);
 });
