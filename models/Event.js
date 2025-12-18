@@ -1,7 +1,13 @@
 const mongoose = require("mongoose");
 
+const TicketSchema = new mongoose.Schema({
+  type: String,
+  price: Number,
+});
+
 const EventSchema = new mongoose.Schema(
   {
+    // EXISTING (UNCHANGED)
     title: { type: String, required: true },
     formattedDate: { type: String, required: true },
     price: { type: Number, required: true },
@@ -9,11 +15,28 @@ const EventSchema = new mongoose.Schema(
     packages: String,
     imageSrc: { type: String, required: true },
 
-    /* 🔥 FEATURED EVENT FIELDS */
+    // 🔥 NEW (FOR DETAILS PAGE)
+    description: String,
+    time: String,
+
+    organizer: {
+      name: String,
+      logo: String,
+    },
+
+    venue: {
+      name: String,
+      address: String,
+      mapEmbedUrl: String,
+    },
+
+    tickets: [TicketSchema],
+
+    // FEATURED (UNCHANGED)
     isFeatured: { type: Boolean, default: false },
     featuredOrder: { type: Number, default: 0 },
-    featuredDetails: { type: String },
-    featuredExpiry: { type: Date }, // auto-hide logic
+    featuredDetails: String,
+    featuredExpiry: Date,
   },
   { timestamps: true }
 );
