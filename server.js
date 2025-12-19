@@ -35,6 +35,11 @@ app.use("/api/promos", promoRoutes);
 const orderRoutes = require("./routes/orders");
 app.use("/api/orders", orderRoutes);
 
+// 🔁 Legacy eSewa Redirect (optional / fallback)
+const esewaRoutes = require("./routes/esewa");
+app.use("/api/esewa", esewaRoutes);
+
+
 /* ===============================
    TEST ROUTE
 ================================ */
