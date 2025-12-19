@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const Order = require("../models/Order");
+const sendTicketEmail = require("../utils/sendTicketEmail");
 
 /* ===============================
    INITIATE PAYMENT (eSewa v2)
@@ -13,12 +14,10 @@ exports.initiatePayment = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // ✅ EXACT AMOUNT FROM STEP 1 (NO FORCING)
-    const amount = String(Math.round(order.total)); // e.g. "2000"
+    const amount = String(Math.round(order.total));
     const transaction_uuid = orderId;
     const product_code = "EPAYTEST";
 
-    // 🔐 SIGNED FIELD ORDER (CRITICAL)
     const signed_field_names =
       "amount,tax_amount,total_amount,transaction_uuid,product_code";
 
@@ -34,7 +33,6 @@ exports.initiatePayment = async (req, res) => {
       .update(signatureString)
       .digest("base64");
 
-    // ✅ FULL REQUIRED PAYLOAD
     res.json({
       amount,
       tax_amount: "0",
@@ -68,7 +66,6 @@ exports.handlePaymentSuccess = async (req, res) => {
       Buffer.from(data, "base64").toString("utf-8")
     );
 
-    // 🔐 VERIFY SIGNATURE (DYNAMIC ORDER)
     const message = decoded.signed_field_names
       .split(",")
       .map((field) => `${field}=${decoded[field]}`)
@@ -80,7 +77,7 @@ exports.handlePaymentSuccess = async (req, res) => {
       .digest("base64");
 
     if (calculatedSignature !== decoded.signature) {
-      console.error("❌ eSewa signature mismatch");
+      console.error("Signature mismatch");
       return res.redirect("http://localhost:5173/payment-failed");
     }
 
@@ -93,15 +90,19 @@ exports.handlePaymentSuccess = async (req, res) => {
         },
       });
 
-      return res.redirect("http://localhost:5173/payment-success");
+      // ✅ ONLY redirect — NOTHING ELSE
+      return res.redirect(
+        `http://localhost:5173/ticket/${decoded.transaction_uuid}`
+      );
     }
 
     return res.redirect("http://localhost:5173/payment-failed");
   } catch (err) {
-    console.error("❌ eSewa success error:", err);
+    console.error("eSewa success error:", err);
     return res.redirect("http://localhost:5173/payment-failed");
   }
 };
+
 
 /* ===============================
    FAILURE CALLBACK

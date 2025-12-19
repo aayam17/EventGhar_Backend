@@ -30,6 +30,10 @@ const OrderSchema = new mongoose.Schema({
     transactionId: String,
   },
 
+  // ✅ NEW (QR VALIDATION)
+  used: { type: Boolean, default: false },
+  usedAt: { type: Date },
+
   createdAt: { type: Date, default: Date.now },
 });
 
