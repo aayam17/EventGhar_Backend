@@ -19,20 +19,31 @@ const OrderSchema = new mongoose.Schema({
     },
   ],
 
-  promoCode: String,
-  discount: Number,
   subtotal: Number,
+  discount: Number,
   total: Number,
 
   payment: {
-    method: String,      // eSewa
-    status: String,      // PAID / FAILED
+    method: String,
+    status: String, // PAID / FAILED
     transactionId: String,
   },
 
-  // ✅ NEW (QR VALIDATION)
+  // 🎫 QR
   used: { type: Boolean, default: false },
-  usedAt: { type: Date },
+  usedAt: Date,
+
+  // 🔁 REFUND SYSTEM (NEW)
+  refund: {
+    requested: { type: Boolean, default: false },
+    status: {
+      type: String,
+      enum: ["NONE", "PENDING", "APPROVED", "REJECTED"],
+      default: "NONE",
+    },
+    requestedAt: Date,
+    resolvedAt: Date,
+  },
 
   createdAt: { type: Date, default: Date.now },
 });

@@ -4,7 +4,7 @@ const Order = require("../models/Order");
 const sendTicketEmail = require("../utils/sendTicketEmail");
 
 /* ===============================
-   CREATE ORDER (NO EMAIL)
+   CREATE ORDER
 ================================ */
 router.post("/", async (req, res) => {
   try {
@@ -24,20 +24,55 @@ router.get("/", async (req, res) => {
 });
 
 /* ===============================
-   GET SINGLE ORDER
+   🔁 USER REQUEST REFUND
 ================================ */
-router.get("/:id", async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ error: "Order not found" });
-    res.json(order);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+router.post("/:id/refund", async (req, res) => {
+  const order = await Order.findById(req.params.id);
+  if (!order) return res.status(404).json({ message: "Order not found" });
+
+  if (order.refund.requested) {
+    return res.json({ message: "Refund already requested" });
   }
+
+  order.refund = {
+    requested: true,
+    status: "PENDING",
+    requestedAt: new Date(),
+  };
+
+  await order.save();
+  res.json({ success: true });
 });
 
 /* ===============================
-   🎫 QR VERIFY (ADMIN)
+   🛠 ADMIN – GET REFUNDS (MUST BE ABOVE :id)
+================================ */
+router.get("/refunds", async (req, res) => {
+  const refunds = await Order.find({
+    "refund.status": "PENDING",
+  }).sort({ "refund.requestedAt": -1 });
+
+  res.json(refunds);
+});
+
+/* ===============================
+   🛠 ADMIN – APPROVE / REJECT
+================================ */
+router.post("/:id/refund-action", async (req, res) => {
+  const { action } = req.body; // APPROVED / REJECTED
+
+  const order = await Order.findById(req.params.id);
+  if (!order) return res.status(404).json({ error: "Order not found" });
+
+  order.refund.status = action;
+  order.refund.resolvedAt = new Date();
+
+  await order.save();
+  res.json({ success: true });
+});
+
+/* ===============================
+   🎫 QR VERIFY
 ================================ */
 router.post("/verify", async (req, res) => {
   const { ticketId } = req.body;
@@ -67,7 +102,7 @@ router.post("/verify", async (req, res) => {
 });
 
 /* ===============================
-   🔁 TRANSFER TICKET (EMAIL ONLY HERE)
+   TRANSFER TICKET (EMAIL ONLY)
 ================================ */
 router.post("/transfer", async (req, res) => {
   const { orderId, newEmail, newName } = req.body;
@@ -79,10 +114,21 @@ router.post("/transfer", async (req, res) => {
   order.user.name = newName;
   await order.save();
 
-  // ✅ EMAIL ONLY WHEN TRANSFERRING
   await sendTicketEmail(order);
-
   res.json({ success: true });
+});
+
+/* ===============================
+   GET SINGLE ORDER (KEEP LAST)
+================================ */
+router.get("/:id", async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
