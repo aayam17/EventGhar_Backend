@@ -5,66 +5,37 @@ const cors = require("cors");
 
 const app = express();
 
-/* ===============================
-   MIDDLEWARE
-================================ */
+/* ================= MIDDLEWARE ================= */
 app.use(cors());
 app.use(express.json());
 
-/* ===============================
-   ROUTES
-================================ */
+/* ================= ROUTES ================= */
 
-// 🔐 AUTH (NEW)
-const authRoutes = require("./routes/auth");
-app.use("/api/auth", authRoutes);
+// Auth
+app.use("/api/auth", require("./routes/auth"));
+app.use("/api/admin", require("./routes/adminAuth"));
+app.use("/api/profile", require("./routes/profile"));
 
-const profileRoutes = require("./routes/profile");
-app.use("/api/profile", profileRoutes);
+// Existing
+app.use("/api/events", require("./routes/events"));
+app.use("/api/featured-events", require("./routes/featuredEvents"));
+app.use("/api/host-requests", require("./routes/hostRequests"));
+app.use("/api/promos", require("./routes/promo"));
+app.use("/api/orders", require("./routes/orders"));
+app.use("/api/esewa", require("./routes/esewa"));
 
-
-// Events
-const eventRoutes = require("./routes/events");
-app.use("/api/events", eventRoutes);
-
-// Featured Events
-const featuredRoutes = require("./routes/featuredEvents");
-app.use("/api/featured-events", featuredRoutes);
-
-// Host / Organizer Requests
-const hostRequestRoutes = require("./routes/hostRequests");
-app.use("/api/host-requests", hostRequestRoutes);
-
-// Promo Codes
-const promoRoutes = require("./routes/promo");
-app.use("/api/promos", promoRoutes);
-
-// Orders
-const orderRoutes = require("./routes/orders");
-app.use("/api/orders", orderRoutes);
-
-// eSewa
-const esewaRoutes = require("./routes/esewa");
-app.use("/api/esewa", esewaRoutes);
-
-/* ===============================
-   TEST ROUTE
-================================ */
+/* ================= TEST ================= */
 app.get("/", (req, res) => {
   res.send("EventGhar Backend is running!");
 });
 
-/* ===============================
-   DATABASE
-================================ */
+/* ================= DATABASE ================= */
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.error("❌ MongoDB Error:", err));
 
-/* ===============================
-   SERVER START
-================================ */
+/* ================= SERVER ================= */
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on port ${PORT}`)
