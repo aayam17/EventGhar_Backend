@@ -5,6 +5,7 @@ const OrderSchema = new mongoose.Schema({
   eventTitle: String,
 
   user: {
+    id: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // ✅ REQUIRED
     name: String,
     email: String,
     phone: String,
@@ -33,7 +34,7 @@ const OrderSchema = new mongoose.Schema({
   used: { type: Boolean, default: false },
   usedAt: Date,
 
-  // 🔁 REFUND SYSTEM (NEW)
+  // 🔁 REFUND SYSTEM
   refund: {
     requested: { type: Boolean, default: false },
     status: {

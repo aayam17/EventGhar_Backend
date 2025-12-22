@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Order = require("../models/Order");
+const User = require("../models/User"); // ✅ NEW
 const sendTicketEmail = require("../utils/sendTicketEmail");
 
 /* ===============================
@@ -45,7 +46,7 @@ router.post("/:id/refund", async (req, res) => {
 });
 
 /* ===============================
-   🛠 ADMIN – GET REFUNDS (MUST BE ABOVE :id)
+   🛠 ADMIN – GET REFUNDS
 ================================ */
 router.get("/refunds", async (req, res) => {
   const refunds = await Order.find({
@@ -59,7 +60,7 @@ router.get("/refunds", async (req, res) => {
    🛠 ADMIN – APPROVE / REJECT
 ================================ */
 router.post("/:id/refund-action", async (req, res) => {
-  const { action } = req.body; // APPROVED / REJECTED
+  const { action } = req.body;
 
   const order = await Order.findById(req.params.id);
   if (!order) return res.status(404).json({ error: "Order not found" });
@@ -102,20 +103,57 @@ router.post("/verify", async (req, res) => {
 });
 
 /* ===============================
-   TRANSFER TICKET (EMAIL ONLY)
+   🔁 TRANSFER TICKET (REGISTERED USERS ONLY)
 ================================ */
 router.post("/transfer", async (req, res) => {
-  const { orderId, newEmail, newName } = req.body;
+  try {
+    const { orderId, newEmail, newName } = req.body;
 
-  const order = await Order.findById(orderId);
-  if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!orderId || !newEmail || !newName) {
+      return res.status(400).json({
+        message: "All fields are required",
+      });
+    }
 
-  order.user.email = newEmail;
-  order.user.name = newName;
-  await order.save();
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+      });
+    }
 
-  await sendTicketEmail(order);
-  res.json({ success: true });
+    // ✅ CHECK IF USER EXISTS
+    const recipient = await User.findOne({ email: newEmail });
+    if (!recipient) {
+      return res.status(400).json({
+        message:
+          "Recipient must be a registered EventGhar user",
+      });
+    }
+
+    // 🔁 TRANSFER OWNERSHIP
+    order.user = {
+      id: recipient._id,
+      name: recipient.fullName,
+      email: recipient.email,
+      phone: recipient.phone,
+    };
+
+    await order.save();
+
+    // 📧 SEND UPDATED TICKET EMAIL
+    await sendTicketEmail(order);
+
+    res.json({
+      success: true,
+      message: "Ticket transferred successfully",
+    });
+  } catch (err) {
+    console.error("TRANSFER ERROR:", err);
+    res.status(500).json({
+      message: "Internal server error",
+    });
+  }
 });
 
 /* ===============================
