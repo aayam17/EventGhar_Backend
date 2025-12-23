@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const Order = require("../models/Order");
+const sendPurchaseEmail = require("../utils/sendPurchaseEmail");
 
 /* ===============================
    INITIATE PAYMENT (eSewa v2)
@@ -84,7 +85,6 @@ exports.handlePaymentSuccess = async (req, res) => {
     /* ================= PAYMENT COMPLETE ================= */
     if (decoded.status === "COMPLETE") {
       const order = await Order.findById(decoded.transaction_uuid);
-
       if (!order) {
         return res.redirect("http://localhost:5173/payment-failed");
       }
@@ -103,7 +103,7 @@ exports.handlePaymentSuccess = async (req, res) => {
         transactionId: decoded.transaction_code,
       };
 
-      /* ✅ SET PURCHASER (CRITICAL FIX) */
+      /* ✅ SET PURCHASER (CRITICAL) */
       if (!order.purchaser?.id) {
         order.purchaser = {
           id: order.user.id,
@@ -113,6 +113,13 @@ exports.handlePaymentSuccess = async (req, res) => {
       }
 
       await order.save();
+
+      /* ✅ SEND PURCHASE EMAIL (ONLY ONCE) */
+      try {
+        await sendPurchaseEmail(order);
+      } catch (emailErr) {
+        console.error("❌ Purchase email failed:", emailErr);
+      }
 
       /* ✅ REDIRECT USER */
       return res.redirect(
