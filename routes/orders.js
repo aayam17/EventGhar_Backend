@@ -102,36 +102,36 @@ router.post("/verify", async (req, res) => {
   });
 });
 
-/* ===============================
-   🔁 TRANSFER TICKET (REGISTERED USERS ONLY)
-================================ */
 router.post("/transfer", async (req, res) => {
   try {
     const { orderId, newEmail, newName } = req.body;
 
     if (!orderId || !newEmail || !newName) {
-      return res.status(400).json({
-        message: "All fields are required",
-      });
+      return res.status(400).json({ message: "All fields required" });
     }
 
     const order = await Order.findById(orderId);
     if (!order) {
-      return res.status(404).json({
-        message: "Order not found",
-      });
+      return res.status(404).json({ message: "Order not found" });
     }
 
-    // ✅ CHECK IF USER EXISTS
     const recipient = await User.findOne({ email: newEmail });
     if (!recipient) {
       return res.status(400).json({
-        message:
-          "Recipient must be a registered EventGhar user",
+        message: "Recipient must be a registered user",
       });
     }
 
-    // 🔁 TRANSFER OWNERSHIP
+    /* SAVE ORIGINAL BUYER ON FIRST TRANSFER */
+    if (!order.purchaser?.id) {
+      order.purchaser = {
+        id: order.user.id,
+        name: order.user.name,
+        email: order.user.email,
+      };
+    }
+
+    /* TRANSFER OWNERSHIP */
     order.user = {
       id: recipient._id,
       name: recipient.fullName,
@@ -139,20 +139,15 @@ router.post("/transfer", async (req, res) => {
       phone: recipient.phone,
     };
 
-    await order.save();
+    order.isGifted = true;
 
-    // 📧 SEND UPDATED TICKET EMAIL
+    await order.save();
     await sendTicketEmail(order);
 
-    res.json({
-      success: true,
-      message: "Ticket transferred successfully",
-    });
+    res.json({ success: true });
   } catch (err) {
     console.error("TRANSFER ERROR:", err);
-    res.status(500).json({
-      message: "Internal server error",
-    });
+    res.status(500).json({ message: "Server error" });
   }
 });
 

@@ -4,12 +4,19 @@ const OrderSchema = new mongoose.Schema({
   eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
   eventTitle: String,
 
+  /* ORIGINAL BUYER */
+  purchaser: {
+    id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    name: String,
+    email: String,
+  },
+
+  /* CURRENT OWNER */
   user: {
-    id: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // ✅ REQUIRED
+    id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     name: String,
     email: String,
     phone: String,
-    address: String,
   },
 
   tickets: [
@@ -26,15 +33,15 @@ const OrderSchema = new mongoose.Schema({
 
   payment: {
     method: String,
-    status: String, // PAID / FAILED
+    status: String,
     transactionId: String,
   },
 
-  // 🎫 QR
+  isGifted: { type: Boolean, default: false },
+
   used: { type: Boolean, default: false },
   usedAt: Date,
 
-  // 🔁 REFUND SYSTEM
   refund: {
     requested: { type: Boolean, default: false },
     status: {

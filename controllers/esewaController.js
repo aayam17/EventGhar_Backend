@@ -1,6 +1,5 @@
 const crypto = require("crypto");
 const Order = require("../models/Order");
-const sendTicketEmail = require("../utils/sendTicketEmail");
 
 /* ===============================
    INITIATE PAYMENT (eSewa v2)
@@ -66,6 +65,7 @@ exports.handlePaymentSuccess = async (req, res) => {
       Buffer.from(data, "base64").toString("utf-8")
     );
 
+    /* ================= VERIFY SIGNATURE ================= */
     const message = decoded.signed_field_names
       .split(",")
       .map((field) => `${field}=${decoded[field]}`)
@@ -77,32 +77,55 @@ exports.handlePaymentSuccess = async (req, res) => {
       .digest("base64");
 
     if (calculatedSignature !== decoded.signature) {
-      console.error("Signature mismatch");
+      console.error("❌ Signature mismatch");
       return res.redirect("http://localhost:5173/payment-failed");
     }
 
+    /* ================= PAYMENT COMPLETE ================= */
     if (decoded.status === "COMPLETE") {
-      await Order.findByIdAndUpdate(decoded.transaction_uuid, {
-        payment: {
-          method: "ESEWA",
-          status: "PAID",
-          transactionId: decoded.transaction_code,
-        },
-      });
+      const order = await Order.findById(decoded.transaction_uuid);
 
-      // ✅ ONLY redirect — NOTHING ELSE
+      if (!order) {
+        return res.redirect("http://localhost:5173/payment-failed");
+      }
+
+      /* ✅ PREVENT DOUBLE PROCESSING */
+      if (order.payment?.status === "PAID") {
+        return res.redirect(
+          `http://localhost:5173/ticket/${order._id}`
+        );
+      }
+
+      /* ✅ SET PAYMENT */
+      order.payment = {
+        method: "ESEWA",
+        status: "PAID",
+        transactionId: decoded.transaction_code,
+      };
+
+      /* ✅ SET PURCHASER (CRITICAL FIX) */
+      if (!order.purchaser?.id) {
+        order.purchaser = {
+          id: order.user.id,
+          name: order.user.name,
+          email: order.user.email,
+        };
+      }
+
+      await order.save();
+
+      /* ✅ REDIRECT USER */
       return res.redirect(
-        `http://localhost:5173/ticket/${decoded.transaction_uuid}`
+        `http://localhost:5173/ticket/${order._id}`
       );
     }
 
     return res.redirect("http://localhost:5173/payment-failed");
   } catch (err) {
-    console.error("eSewa success error:", err);
+    console.error("❌ eSewa success error:", err);
     return res.redirect("http://localhost:5173/payment-failed");
   }
 };
-
 
 /* ===============================
    FAILURE CALLBACK
