@@ -3,6 +3,7 @@ const router = express.Router();
 const Order = require("../models/Order");
 const User = require("../models/User"); // ✅ NEW
 const sendTicketEmail = require("../utils/sendTicketEmail");
+const Notification = require("../models/Notification"); // ✅ ADDED
 
 /* ===============================
    CREATE ORDER
@@ -102,6 +103,9 @@ router.post("/verify", async (req, res) => {
   });
 });
 
+/* ===============================
+   🎁 TRANSFER TICKET
+================================ */
 router.post("/transfer", async (req, res) => {
   try {
     const { orderId, newEmail, newName } = req.body;
@@ -142,6 +146,16 @@ router.post("/transfer", async (req, res) => {
     order.isGifted = true;
 
     await order.save();
+
+    /* ================= 🔔 NOTIFICATION ================= */
+    await Notification.create({
+      userId: recipient._id,
+      type: "TICKET_GIFT",
+      title: "🎁 Ticket Received",
+      message: `You received a ticket for ${order.eventTitle}`,
+      link: `/ticket/${order._id}`,
+    });
+
     await sendTicketEmail(order);
 
     res.json({ success: true });
@@ -165,3 +179,28 @@ router.get("/:id", async (req, res) => {
 });
 
 module.exports = router;
+
+/* ===============================
+   DELETE ORDER (ADMIN / CLEANUP)
+================================ */
+router.delete("/:id", async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    await Order.findByIdAndDelete(req.params.id);
+
+    // Optional: clean notifications related to this order
+    await Notification.deleteMany({
+      link: `/ticket/${req.params.id}`,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("DELETE ORDER ERROR:", err);
+    res.status(500).json({ message: "Failed to delete order" });
+  }
+});

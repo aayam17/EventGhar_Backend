@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const Event = require("../models/Event");
 const upload = require("../middleware/upload");
+const User = require("../models/User"); // ✅ ADDED
+const Notification = require("../models/Notification"); // ✅ ADDED
 
 /* =====================================================
    CREATE EVENT
@@ -42,6 +44,20 @@ router.post("/", upload.single("image"), async (req, res) => {
     });
 
     await event.save();
+
+    /* ================= 🔔 NOTIFY ALL USERS ================= */
+    const users = await User.find({ role: "user" }).select("_id");
+
+    await Notification.insertMany(
+      users.map((u) => ({
+        userId: u._id,
+        type: "NEW_EVENT",
+        title: "📢 New Event Published",
+        message: event.title,
+        link: `/events/${event._id}`,
+      }))
+    );
+
     res.status(201).json(event);
   } catch (err) {
     console.error("CREATE EVENT ERROR:", err);

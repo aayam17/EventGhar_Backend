@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const Order = require("../models/Order");
 const sendPurchaseEmail = require("../utils/sendPurchaseEmail");
+const Notification = require("../models/Notification"); // ✅ ADDED
 
 /* ===============================
    INITIATE PAYMENT (eSewa v2)
@@ -113,6 +114,15 @@ exports.handlePaymentSuccess = async (req, res) => {
       }
 
       await order.save();
+
+      /* ================= 🔔 NOTIFICATION (STEP 3) ================= */
+      await Notification.create({
+        userId: order.user.id,
+        type: "TICKET_PURCHASE",
+        title: "🎟 Ticket Confirmed",
+        message: `Your ticket for ${order.eventTitle} has been confirmed.`,
+        link: `/ticket/${order._id}`,
+      });
 
       /* ✅ SEND PURCHASE EMAIL (ONLY ONCE) */
       try {
