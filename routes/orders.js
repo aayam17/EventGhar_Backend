@@ -1,13 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const Order = require("../models/Order");
-const User = require("../models/User"); // ✅ NEW
+const User = require("../models/User"); 
 const sendTicketEmail = require("../utils/sendTicketEmail");
-const Notification = require("../models/Notification"); // ✅ ADDED
+const Notification = require("../models/Notification"); 
 
-/* ===============================
-   CREATE ORDER
-================================ */
+/* CREATE ORDER */
 router.post("/", async (req, res) => {
   try {
     const order = await Order.create(req.body);
@@ -17,17 +15,13 @@ router.post("/", async (req, res) => {
   }
 });
 
-/* ===============================
-   GET ALL ORDERS
-================================ */
+/* GET ALL ORDERS */
 router.get("/", async (req, res) => {
   const orders = await Order.find().sort({ createdAt: -1 });
   res.json(orders);
 });
 
-/* ===============================
-   🔁 USER REQUEST REFUND
-================================ */
+/* USER REQUEST REFUND */
 router.post("/:id/refund", async (req, res) => {
   const order = await Order.findById(req.params.id);
   if (!order) return res.status(404).json({ message: "Order not found" });
@@ -46,9 +40,7 @@ router.post("/:id/refund", async (req, res) => {
   res.json({ success: true });
 });
 
-/* ===============================
-   🛠 ADMIN – GET REFUNDS
-================================ */
+/* ADMIN – GET REFUNDS  */
 router.get("/refunds", async (req, res) => {
   const refunds = await Order.find({
     "refund.status": "PENDING",
@@ -57,9 +49,7 @@ router.get("/refunds", async (req, res) => {
   res.json(refunds);
 });
 
-/* ===============================
-   🛠 ADMIN – APPROVE / REJECT
-================================ */
+/* ADMIN – APPROVE / REJECT */
 router.post("/:id/refund-action", async (req, res) => {
   const { action } = req.body;
 
@@ -73,9 +63,7 @@ router.post("/:id/refund-action", async (req, res) => {
   res.json({ success: true });
 });
 
-/* ===============================
-   🎫 QR VERIFY
-================================ */
+/* QR VERIFY */
 router.post("/verify", async (req, res) => {
   const { ticketId } = req.body;
 
@@ -103,9 +91,7 @@ router.post("/verify", async (req, res) => {
   });
 });
 
-/* ===============================
-   🎁 TRANSFER TICKET
-================================ */
+/* TRANSFER TICKET */
 router.post("/transfer", async (req, res) => {
   try {
     const { orderId, newEmail, newName } = req.body;
@@ -165,9 +151,7 @@ router.post("/transfer", async (req, res) => {
   }
 });
 
-/* ===============================
-   GET SINGLE ORDER (KEEP LAST)
-================================ */
+/* GET SINGLE ORDER (KEEP LAST)*/
 router.get("/:id", async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
@@ -180,9 +164,7 @@ router.get("/:id", async (req, res) => {
 
 module.exports = router;
 
-/* ===============================
-   DELETE ORDER (ADMIN / CLEANUP)
-================================ */
+/* DELETE ORDER (ADMIN / CLEANUP) */
 router.delete("/:id", async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);

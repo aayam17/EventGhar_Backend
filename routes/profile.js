@@ -21,7 +21,7 @@ router.get("/", auth, async (req, res) => {
   res.json(user);
 });
 
-/* ================= 🎟 MY TICKETS (PURCHASED) ================= */
+/* ================= MY TICKETS (PURCHASED) ================= */
 router.get("/my-tickets", auth, async (req, res) => {
   const tickets = await Order.find({
     "user.id": req.userId,
@@ -32,7 +32,7 @@ router.get("/my-tickets", auth, async (req, res) => {
   res.json(tickets);
 });
 
-/* ================= 🎁 GIFTED TICKETS ================= */
+/* ================= GIFTED TICKETS ================= */
 router.get("/gifted-tickets", auth, async (req, res) => {
   const tickets = await Order.find({
     "user.id": req.userId,

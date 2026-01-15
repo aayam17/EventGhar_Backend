@@ -2,26 +2,26 @@ const express = require("express");
 const router = express.Router();
 const HostRequest = require("../models/HostRequest");
 
-/* ================= DATE VALIDATION HELPERS ================= */
+/* DATE VALIDATION HELPERS */
 const startOfDay = (date) => {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   return d;
 };
 
-/* ================= CREATE (USER SUBMITS FORM) ================= */
+/* CREATE (USER SUBMITS FORM)  */
 router.post("/", async (req, res) => {
   try {
     const { eventDate } = req.body;
 
-    /* ---------- REQUIRED DATE CHECK ---------- */
+    /* REQUIRED DATE CHECK */
     if (!eventDate) {
       return res.status(400).json({
         error: "Event date is required",
       });
     }
 
-    /* ---------- DATE RANGE VALIDATION ---------- */
+    /* DATE RANGE VALIDATION */
     const selectedDate = startOfDay(new Date(eventDate));
 
     // Yesterday (allowed)
@@ -39,7 +39,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    /* ---------- SAVE REQUEST ---------- */
+    /* SAVE REQUEST */
     const request = new HostRequest(req.body);
     await request.save();
 
@@ -54,7 +54,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-/* ================= READ (ADMIN FETCH) ================= */
+/* READ (ADMIN FETCH) */
 router.get("/", async (req, res) => {
   try {
     const requests = await HostRequest.find().sort({ createdAt: -1 });
@@ -66,7 +66,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-/* ================= UPDATE STATUS (ADMIN APPROVE/REJECT) ================= */
+/* UPDATE STATUS (ADMIN APPROVE/REJECT)*/
 router.patch("/:id", async (req, res) => {
   try {
     const { status } = req.body;
