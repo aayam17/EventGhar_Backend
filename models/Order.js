@@ -1,17 +1,34 @@
 const mongoose = require("mongoose");
 
+const OrderTicketSchema = new mongoose.Schema(
+  {
+    type: { type: String },
+    price: Number,
+    qty: Number,
+  },
+  { _id: false }
+);
+
+const PassSchema = new mongoose.Schema(
+  {
+    token: { type: String },
+    type: { type: String },
+    used: { type: Boolean, default: false },
+    usedAt: Date,
+  },
+  { _id: false }
+);
+
 const OrderSchema = new mongoose.Schema({
   eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
   eventTitle: String,
 
-  /* ORIGINAL BUYER */
   purchaser: {
     id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     name: String,
     email: String,
   },
 
-  /* CURRENT OWNER */
   user: {
     id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     name: String,
@@ -19,16 +36,11 @@ const OrderSchema = new mongoose.Schema({
     phone: String,
   },
 
-  tickets: [
-    {
-      type: String,
-      price: Number,
-      qty: Number,
-    },
-  ],
+  tickets: [OrderTicketSchema],
 
   subtotal: Number,
-  discount: Number,
+  discount: { type: Number, default: 0 },
+  promoCode: { type: String, default: "" },
   total: Number,
 
   payment: {
@@ -36,6 +48,13 @@ const OrderSchema = new mongoose.Schema({
     status: String,
     transactionId: String,
   },
+
+  ticketToken: { type: String, unique: true, sparse: true, index: true },
+
+  // One entry per individual ticket (a 3-ticket order has 3 passes), each with
+  // its own QR token so a group can arrive separately. Orders made before this
+  // change have no passes and keep using ticketToken for a single scan.
+  passes: [PassSchema],
 
   isGifted: { type: Boolean, default: false },
 
@@ -55,5 +74,7 @@ const OrderSchema = new mongoose.Schema({
 
   createdAt: { type: Date, default: Date.now },
 });
+
+OrderSchema.index({ "passes.token": 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model("Order", OrderSchema);

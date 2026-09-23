@@ -7,8 +7,10 @@ const FeaturedEventSchema = new mongoose.Schema(
     venue: String,
     eventDateTime: { type: Date, required: true },
     imageSrc: { type: String, required: true },
+    price: { type: Number, default: 0 },
 
-    /* 🔥 NEW */
+    eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
+
     isActive: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
     expiryDate: { type: Date },

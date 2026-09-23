@@ -10,4 +10,11 @@ const storage = new CloudinaryStorage({
   },
 });
 
-module.exports = multer({ storage });
+module.exports = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max per image
+  fileFilter: (req, file, cb) => {
+    // Only accept actual image uploads (event/featured-event photos)
+    cb(null, /^image\//.test(file.mimetype));
+  },
+});

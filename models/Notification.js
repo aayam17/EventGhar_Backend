@@ -10,7 +10,7 @@ const NotificationSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["TICKET_PURCHASE", "TICKET_GIFT", "NEW_EVENT"],
+      enum: ["TICKET_PURCHASE", "TICKET_GIFT", "NEW_EVENT", "REFUND_UPDATE"],
       required: true,
     },
 

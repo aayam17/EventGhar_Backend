@@ -1,5 +1,6 @@
 const nodemailer = require("nodemailer");
 const QRCode = require("qrcode");
+const escapeHtml = require("./escapeHtml");
 
 const sendPurchaseEmail = async (order) => {
   try {
@@ -22,18 +23,39 @@ const sendPurchaseEmail = async (order) => {
 
     await transporter.verify();
 
-    /* ================= QR ================= */
-    const qrPayload = String(order._id);
-    const qrDataUrl = await QRCode.toDataURL(qrPayload, {
-      width: 260,
-      margin: 2,
-      errorCorrectionLevel: "H",
-    });
+    /* ================= QR (one per ticket) ================= */
+    const passList =
+      order.passes && order.passes.length
+        ? order.passes.map((p) => ({ token: p.token, type: p.type }))
+        : [{ token: String(order.ticketToken || order._id), type: "Entry" }];
 
-    const qrBuffer = Buffer.from(
-      qrDataUrl.split(",")[1],
-      "base64"
-    );
+    const qrImages = [];
+    for (let i = 0; i < passList.length; i++) {
+      const dataUrl = await QRCode.toDataURL(passList[i].token, {
+        width: 260,
+        margin: 2,
+        errorCorrectionLevel: "H",
+      });
+      qrImages.push({
+        cid: `ticketqr${i}`,
+        label: `Ticket ${i + 1} of ${passList.length} · ${passList[i].type || "Entry"}`,
+        buffer: Buffer.from(dataUrl.split(",")[1], "base64"),
+      });
+    }
+
+    const qrBlocks = qrImages
+      .map(
+        (q) => `
+          <div style="display:inline-block;margin:10px;text-align:center">
+            <p style="font-size:13px;font-weight:700;color:#111827;margin:0 0 8px">
+              ${escapeHtml(q.label)}
+            </p>
+            <div style="padding:14px;border-radius:18px;background:#ffffff;border:2px dashed #d1d5db">
+              <img src="cid:${q.cid}" alt="${escapeHtml(q.label)}" style="width:200px;height:200px;display:block" />
+            </div>
+          </div>`
+      )
+      .join("");
 
     const ticketCount = order.tickets.reduce(
       (s, t) => s + t.qty,
@@ -77,7 +99,7 @@ const sendPurchaseEmail = async (order) => {
       <div style="padding:32px">
 
         <p style="font-size:15px;color:#111827">
-          Hi <strong>${order.user?.name || "Guest"}</strong>,
+          Hi <strong>${escapeHtml(order.user?.name || "Guest")}</strong>,
         </p>
 
         <p style="font-size:15px;color:#374151">
@@ -99,7 +121,7 @@ const sendPurchaseEmail = async (order) => {
             font-weight:700;
             color:#111827
           ">
-            ${order.eventTitle}
+            ${escapeHtml(order.eventTitle)}
           </h2>
 
           <table style="width:100%;font-size:14px;color:#374151">
@@ -114,41 +136,32 @@ const sendPurchaseEmail = async (order) => {
             <tr>
               <td style="padding:6px 0">🆔 Order ID</td>
               <td align="right" style="font-size:12px;color:#6b7280">
-                ${order._id}
+                ${escapeHtml(order._id)}
               </td>
             </tr>
           </table>
         </div>
 
-        <!-- QR -->
+        <!-- QR: one per ticket -->
         <div style="text-align:center;margin:32px 0">
           <p style="font-size:15px;font-weight:700;color:#111827">
             🎫 Scan at Event Entry
           </p>
+          <p style="font-size:13px;color:#6b7280;margin:0 0 6px">
+            Each ticket has its own QR. Guests can arrive separately.
+          </p>
 
-          <div style="
-            display:inline-block;
-            padding:18px;
-            border-radius:18px;
-            background:#ffffff;
-            border:2px dashed #d1d5db
-          ">
-            <img
-              src="cid:ticketqr"
-              alt="Ticket QR"
-              style="width:240px;height:240px;display:block"
-            />
-          </div>
+          ${qrBlocks}
 
           <p style="font-size:13px;color:#6b7280;margin-top:12px">
-            This QR is also attached for offline use
+            These QR codes are also attached for offline use
           </p>
         </div>
 
         <!-- CTA -->
         <div style="text-align:center;margin-top:34px">
           <a
-            href="http://localhost:5173/ticket/${order._id}"
+            href="${process.env.FRONTEND_URL || "http://localhost:5173"}/ticket/${order._id}"
             style="
               display:inline-block;
               padding:14px 30px;
@@ -186,14 +199,12 @@ const sendPurchaseEmail = async (order) => {
 </html>
       `,
 
-      attachments: [
-        {
-          filename: "event-ticket-qr.png",
-          content: qrBuffer,
-          cid: "ticketqr",
-          contentType: "image/png",
-        },
-      ],
+      attachments: qrImages.map((q, i) => ({
+        filename: `ticket-${i + 1}-qr.png`,
+        content: q.buffer,
+        cid: q.cid,
+        contentType: "image/png",
+      })),
     };
 
     await transporter.sendMail(mailOptions);

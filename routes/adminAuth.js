@@ -2,12 +2,18 @@ const router = require("express").Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const publicUser = require("../utils/publicUser");
+const rateLimit = require("../utils/rateLimit");
 
-router.post("/login", async (req, res) => {
+const authLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 15 });
+
+router.post("/login", authLimit, async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const admin = await User.findOne({ email });
+    const admin = await User.findOne({
+      email: String(email || "").trim().toLowerCase(),
+    });
     if (!admin || admin.role !== "admin") {
       return res.status(403).json({ message: "Admins only" });
     }
@@ -23,7 +29,7 @@ router.post("/login", async (req, res) => {
       { expiresIn: "2h" }
     );
 
-    res.json({ token, admin });
+    res.json({ token, admin: publicUser(admin) });
   } catch (err) {
     console.error("ADMIN LOGIN ERROR:", err);
     res.status(500).json({ message: "Internal server error" });

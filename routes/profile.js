@@ -47,12 +47,29 @@ router.get("/gifted-tickets", auth, async (req, res) => {
 router.put("/", auth, async (req, res) => {
   const { fullName, phone, notifications } = req.body;
 
-  const user = await User.findByIdAndUpdate(
-    req.userId,
-    { fullName, phone, notifications },
-    { new: true }
-  ).select("-password");
+  // Only accept known fields, and never blank out a required one
+  const update = {};
+  if (typeof fullName === "string") {
+    if (!fullName.trim()) {
+      return res.status(400).json({ message: "Name can't be empty" });
+    }
+    update.fullName = fullName.trim();
+  }
+  if (typeof phone === "string") {
+    if (!phone.trim()) {
+      return res.status(400).json({ message: "Phone number can't be empty" });
+    }
+    update.phone = phone.trim();
+  }
+  if (notifications && typeof notifications.email === "boolean") {
+    update["notifications.email"] = notifications.email;
+  }
 
+  const user = await User.findByIdAndUpdate(req.userId, update, {
+    new: true,
+  }).select("-password");
+
+  if (!user) return res.status(404).json({ message: "User not found" });
   res.json(user);
 });
 

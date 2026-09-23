@@ -15,6 +15,10 @@ const UserSchema = new mongoose.Schema(
 
     password: { type: String, required: true },
 
+    // Set only for accounts created/linked via "Sign in with Google". Lets us
+    // look a user up by their Google account on repeat sign-ins.
+    googleId: { type: String, unique: true, sparse: true, index: true },
+
     role: {
       type: String,
       enum: ["user", "admin"],
